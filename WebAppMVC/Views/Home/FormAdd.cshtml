@@ -1,0 +1,22 @@
+﻿@model Item
+
+<form action="/Home/Create" method="post">
+  <div class="mb-3 mt-3">
+    <label>Tile:</label>
+    <input type="text" class="form-control" id="email" placeholder="Tile" name="Title">
+  </div>
+  <div class="mb-3">
+    <label>Description:</label>
+   <textarea class="form-control" rows="3" placeholder="Detail..."></textarea>
+  </div>
+  <div class="mb-3">
+    <label>Priority</label>
+    <select class="form-select">
+        <option value="2">Medium</option>
+        <option value="1">Low</option>
+        <option value="3">Hight</option>
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary">Submit</button>
+  <a href="/" class="btn btn-primary">Cancel</a>
+</form>

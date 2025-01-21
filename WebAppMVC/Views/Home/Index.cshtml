@@ -1,0 +1,68 @@
+﻿@model TodoItemList
+@{
+	ViewData["Title"] = "Home Page";
+}
+<div class="text-center">
+	<h1 class="display-4">Welcome TodoApp</h1>
+	<p class="lead text-primary"> Todo List</p>
+	<table class="table">
+	<thead>
+	  <tr>
+		<th>ID</th>
+		<th>Title</th>
+		<th>Description</th>
+		<th>Priority</th>
+		<th>Done</th>
+		<th>Clear</th>
+	  </tr>
+	</thead>
+	<tbody>
+			@foreach (var item in Model.Items)
+			{
+					<tr>
+					<td>@(item.Id + 1)</td>
+					<td>@item.Title</td>
+					<td>@item.Description</td>
+					<td>@item.Priority</td>
+					<td>
+					<form action="Home/Update" method="post" id="myForm">
+						<input class='checkBox' type="checkbox" name=@item.Id value="true" @(item.IsComplete ? "checked" : "") />
+						<input class="checkBox" type="hidden" name=@item.Id value="false" />
+					</form>
+					</td>
+
+					<td>
+						<form action="Home/Remove" method='post' id=@("form"+item.Id)>
+							<input type='hidden' name='Id' value=@item.Id>
+							<image class='imageRemove' data-id=@item.Id src="icons/icons8-trash-bin-32.png" alt="Icon" width="24" height="24" />
+						</form>
+					</td>
+					</tr>
+			}
+	</tbody>
+  </table>
+	<a type="button" class="btn btn-primary" action="get" href="Home/Add">ADD</a>
+	<buttion type="button" class="btn btn-danger">DELETE</buttion>
+</div>
+@section Scripts
+{
+	<script>
+		var myCheckboxs = document.querySelectorAll('.checkBox');
+		myCheckboxs.forEach(myCheckbox => {
+			myCheckbox.addEventListener('change', () => {
+				document.getElementById('myForm').submit();
+			});
+		});
+			var images = document.querySelectorAll('.imageRemove');
+		images.forEach( image => {
+			image.addEventListener('click', ()=>{
+				var a = image.getAttribute('data-id')
+				document.getElementById(`form${a}`).submit()
+			})
+		})
+	</script>
+}
+
+
+
+
