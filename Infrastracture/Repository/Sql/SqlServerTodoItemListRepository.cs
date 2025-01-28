@@ -1,5 +1,4 @@
-﻿
-using Microsoft.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -11,66 +10,56 @@ using System.Text;
 using System.Threading.Tasks;
 using Entities;
 using UseCase.Repository;
+using System.Transactions;
 
 namespace Infrastracture.Repository.SqlServer
 {
-    internal class SqlServerTodoItemRepository: ITodoItemRepository
+    public class SqlServerTodoItemListRepository: ITodoItemRepository
     {
-        private readonly string AddQurery = "INSERT INTO TODOITEM ( id, title, desciption, isComplete, priority) VALUES (@id, @title, @des, @complete)";
+        private readonly string AddQurery = "INSERT INTO TODOITEM ( title, description, isComplete, priority) VALUES ( @title, @description, @isComplete, @priority)";
         private readonly string ClearQuery = "DELETE from TODOITEM";
         private readonly string FindByIdQuery = "SELECT * FROM TODOITEM WHERE ID = @ID";
-        private readonly string DeleteQuery = "Delete rom todoitem where id = @id";
-        private readonly string UpdateQuery = "update todoitem set title = @title, desciption = @des, isComplete = @isComplete, priority = @priority where id = @id";
+        private readonly string DeleteQuery = "Delete from todoitem where id = @id";
+        private readonly string UpdateQuery = "update todoitem set title = @title, description = @des, isComplete = @isComplete, priority = @priority where id = @id";
         private readonly string SELECT = "select ";
         private readonly string FindAll = "id, title, description, isComplete, priority where (1=1)";
         private readonly string RemoveQuery = "DElete from TODOITEM where id=@id";
+        private readonly string LoadingAllTodo = "Select * from TODOITEM";
         private readonly SqlConnection conn;
-        private readonly SqlTransaction? transaction;
 
-        public SqlServerTodoItemRepository(SqlConnection conn, SqlTransaction transaction)
+		public SqlServerTodoItemListRepository(SqlConnection conn)
         {
-            this.conn = conn ?? throw new ArgumentNullException(nameof(conn));
-            this.transaction = transaction;
+			this.conn = conn ?? throw new ArgumentNullException(nameof(conn));
         }
 
         public void Add(TodoItem item)
         {
-            if(transaction != null)
-            {
-                var cmd = conn.CreateCommand();
-                cmd.Transaction = transaction;
-                cmd.CommandText = AddQurery;
-                cmd.Parameters.Add("@id",SqlDbType.Int).Value = item.Id;
-                cmd.Parameters.Add("@title",SqlDbType.NVarChar).Value = item.Title;
-                cmd.Parameters.Add("@des",SqlDbType.NVarChar).Value = item.Description;
-                cmd.Parameters.Add("@complete",SqlDbType.Bit).Value = item.IsComplete;
-                cmd.Parameters.Add("@priority",SqlDbType.NVarChar,6).Value = item.Priority.ToString();
-                cmd.ExecuteNonQuery();
-            }
-        }
+			var cmd = conn.CreateCommand();
+			cmd.CommandText = AddQurery;
+			//cmd.Parameters.Add("@id",SqlDbType.Int).Value = item.Id;
+			cmd.Parameters.Add("@title", SqlDbType.NVarChar, 50).Value = item.Title;
+			cmd.Parameters.Add("@description", SqlDbType.NVarChar, 250).Value = item.Description ?? string.Empty;
+			cmd.Parameters.Add("@isComplete", SqlDbType.Bit).Value = item.IsComplete;
+			cmd.Parameters.Add("@priority", SqlDbType.Int).Value = (int)item.Priority;
+			cmd.ExecuteNonQuery();
+		}
 
         public void DeleteAll()
         {
             var cmd = conn.CreateCommand();
             cmd.CommandText = ClearQuery;
-            if(transaction != null)
-                cmd.Transaction = transaction;
             cmd.ExecuteNonQuery();
         }
         public void Remove(int id)
         {
             var cmd = conn.CreateCommand();
             cmd.CommandText = RemoveQuery;
-            if (transaction != null)
-                cmd.Transaction = transaction;
             cmd.Parameters.Add(new SqlParameter("@id", SqlDbType.Int)).Value = id;
             cmd.ExecuteNonQuery();
         }
         public IEnumerable<TodoItem>? Find(TodoItemCreterias item)
         {
             var cmd = conn.CreateCommand();
-            if (transaction != null)
-                cmd.Transaction = transaction;
             var sql = new StringBuilder(SELECT);
             sql.Append(FindAll);
             if (item.Priority == Priority.Hight)
@@ -121,8 +110,6 @@ namespace Infrastracture.Repository.SqlServer
             var cmd = conn.CreateCommand();
             cmd.CommandText = FindByIdQuery;
             cmd.Parameters.Add(new SqlParameter("@ID", SqlDbType.Int)).Value = id;
-            if(transaction != null)
-                cmd.Transaction= transaction;
             using var reader = cmd.ExecuteReader();
             if (reader.HasRows)
             {
@@ -134,10 +121,14 @@ namespace Infrastracture.Repository.SqlServer
                         Title= reader.GetString(1),
                         Description = reader.GetString(2),
                         IsComplete = reader.GetBoolean(3),
-                        Priority = (reader.GetString(4).Equals("Low") ? Priority.Low
-                                                                    : reader.GetBoolean(4).Equals("Hight") ? 
-                                                                    Priority.Hight : Priority.Medium)
-                    };
+                        Priority = reader.GetInt32(4) switch
+                        {
+                            1 => Priority.Hight,
+                            2 => Priority.Medium,
+                            3 => Priority.Low,
+                            _ => Priority.Medium
+                        }
+					};
                 }
             }
             return null;
@@ -145,28 +136,51 @@ namespace Infrastracture.Repository.SqlServer
 
         public IEnumerable<TodoItem> GetAllTodoItem()
         {
-            throw new NotImplementedException();
-        }
+            var cmd = conn.CreateCommand();
+            cmd.CommandText = LoadingAllTodo;
+            List<TodoItem> list = [];
+			using var reader = cmd.ExecuteReader();
+            if (reader.HasRows)
+            {
+                while (reader.Read() && reader!=null)
+                {
+                    list. Add(new TodoItem()
+					{
+						Id = reader.GetInt32(0),
+						Title = reader.GetString(1),
+						Description = reader.GetString(2),
+                        IsComplete = reader.GetBoolean(3),
+						Priority = reader.GetInt32(4) switch
+						{
+							1 => Priority.Hight,
+							2 => Priority.Medium,
+							3 => Priority.Low,
+							_ => Priority.Medium
+						}
+					});
+				}
+            }
+            //cmd.Transaction.Commit();
+			return list;
+		}
 
         public void Remove(TodoItem item)
         {
             var cmd = conn.CreateCommand();
             cmd.CommandText = DeleteQuery;
             cmd.Parameters.Add(new SqlParameter("@id", SqlDbType.Int)).Value= item.Id;
-            if (transaction != null) cmd.Transaction= transaction;
             cmd.ExecuteNonQuery();
         }
 
         public void Update(TodoItem item)
         {
             var cmd = conn.CreateCommand();
-            if(transaction != null)
-                cmd.Transaction= transaction;
             cmd.CommandText = UpdateQuery;
-            cmd.Parameters.Add(new SqlParameter("@title", SqlDbType.NVarChar)).Value= item.Title;
-            cmd.Parameters.Add(new SqlParameter("@des", SqlDbType.NVarChar)).Value = item.Description;
+            cmd.Parameters.Add(new SqlParameter("@id", SqlDbType.Int)).Value = item.Id;
+			cmd.Parameters.Add(new SqlParameter("@title", SqlDbType.NVarChar, 50)).Value= item.Title;
+            cmd.Parameters.Add(new SqlParameter("@des", SqlDbType.NVarChar, 250)).Value = item.Description;
             cmd.Parameters.Add(new SqlParameter("@isComplete", SqlDbType.Bit)).Value= item.IsComplete;
-            cmd.Parameters.Add(new SqlParameter("@priority", SqlDbType.NVarChar)).Value= item.Priority.ToString();
+            cmd.Parameters.Add(new SqlParameter("@priority", SqlDbType.Int)).Value= (int)item.Priority;
             cmd.ExecuteNonQuery();
         }
     }

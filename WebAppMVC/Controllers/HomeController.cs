@@ -1,92 +1,88 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
-using Entities;
-using UseCase;
-using UseCase.Repository;
 using WebAppMVC.Models;
 
-namespace WebAppMVC.Controllers
+namespace WebAppMVC.Controllers;
+
+public class HomeController : Controller
 {
-    public class HomeController : Controller
+    private readonly ILogger<HomeController> _logger;
+
+    private readonly TodoItemManager todoItemManager;
+
+		public HomeController(ILogger<HomeController> logger, TodoItemManager todoItemManager)
     {
-        private readonly ILogger<HomeController> _logger;
-
-        private readonly TodoItemManager todoItemManager;
-
-        public HomeController(ILogger<HomeController> logger, TodoItemManager todoItemManager)
+        _logger = logger;
+        this.todoItemManager = todoItemManager ?? throw new ArgumentNullException(nameof(todoItemManager));
+    }
+		public IActionResult Index()
+    {
+        var items = todoItemManager.GetAllTodoItem();
+        var list = new TodoItemList()
         {
-            _logger = logger;
-            this.todoItemManager = todoItemManager ?? throw new ArgumentNullException(nameof(todoItemManager));
-        }
-
-        public IActionResult Index()
-        {
-            var items = todoItemManager.GetAllTodoItem();
-            var list = new TodoItemList()
+            Items = items.Select(i => new ItemModel()
             {
-                Items = items.Select(i => new Item()
-                {
-                    Id = i.Id,
-                    Title = i.Title,
-                    Description = i.Description,
-                    Priority = i.Priority,
-                    IsComplete = i.IsComplete
-                })
-            };
-            return View(list);
-        }
+                Id = i.Id,
+                Title = i.Title,
+                Description = i.Description,
+                Priority = i.Priority.ToString(),
+				IsComplete = i.IsComplete
+            })
+        };
+        return View(list);
+    }
 
-        public IActionResult Privacy()
-        {
-            return View();
-        }
-        [HttpGet]
-        public IActionResult Add()
-        {
-            return View("FormAdd");
-        }
+    [HttpGet]
+    public IActionResult Add()
+    {
+        return View("FormAdd");
+    }
 
-        [HttpPost]
-        public IActionResult Create(Item item)
+    [HttpPost]
+    public IActionResult Create(ItemModel item)
+    {
+        todoItemManager.AddTodoItem(new TodoItem
         {
-            todoItemManager.AddTodoItem(new TodoItem
+            Title = item.Title,
+            Description = item.Description,
+            Priority = item.Priority switch
             {
-                Id = item.Id,
-                Title = item.Title,
-                Description = item.Description,
-                Priority = item.Priority,
-                IsComplete = item.IsComplete
-            });
-            return RedirectToAction("Index");
+					"1" => Priority.Hight,
+					"2" => Priority.Medium,
+					"3" => Priority.Low,
+					_ => Priority.Medium
+				},
+            IsComplete = item.IsComplete
+        });
+        return RedirectToAction("Index");
+    }
+
+    [HttpPost]
+    public IActionResult Update(Dictionary<int,bool> checkboxs)
+    {
+        foreach (var checkbox in checkboxs)
+        {
+            todoItemManager.MarkComplete(checkbox.Key,checkbox.Value);
         }
 
-        [HttpPost]
-        public IActionResult Update(Dictionary<int,bool> checkboxs)
-        {
-            foreach (var checkbox in checkboxs)
-            {
-                todoItemManager.MarkComplete(checkbox.Key,checkbox.Value);
-            }
+        return RedirectToAction("Index");
+    }
 
-            return RedirectToAction("Index");
-        }
-
-        [HttpPost]
-        public IActionResult Remove( int id)
-        {
-            if (id < 0)
+    [HttpPost]
+    public IActionResult Remove( int id)
+    {
+        if (id < 0)
 				return BadRequest("Invalid data.");
-            else
-            {
-                todoItemManager.RemoveTodoItem(id);
-                return RedirectToAction("Index");
-            }
-        }
-
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
+        else
         {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            todoItemManager.RemoveTodoItem(id);
+            return RedirectToAction("Index");
         }
+    }
+
+    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+    public IActionResult Error()
+    {
+        return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
 }

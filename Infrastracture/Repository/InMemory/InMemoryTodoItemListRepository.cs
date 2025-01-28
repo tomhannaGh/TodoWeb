@@ -12,11 +12,12 @@ namespace Infrastracture.Repository.InMemoryRepository
     public class InMemoryTodoItemListRepository : ITodoItemRepository
     {
         private List<TodoItem> Items { get; set; } = [];
+        private int nextId = 0;
 
-        public void Add(TodoItem item)
+		public void Add(TodoItem item)
         {
-            item.Id = Items.Count;
-            Items.Add(item);
+            item.Id = nextId++;
+			Items.Add(item);
         }
 
         public void DeleteAll()
@@ -56,7 +57,8 @@ namespace Infrastracture.Repository.InMemoryRepository
 
         public void Update(TodoItem item)
         {
-            Items[item.Id] = item;
-        }
+            var index = Items.FindIndex(x => x.Id.Equals(item.Id));
+            Items[index] = item;
+		}
     }
 }

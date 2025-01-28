@@ -1,14 +1,16 @@
 ﻿@model TodoItemList
 @{
+	var i = 1;
+}
+@{
 	ViewData["Title"] = "Home Page";
 }
 <div class="text-center">
 	<h1 class="display-4">Welcome TodoApp</h1>
-	<p class="lead text-primary"> Todo List</p>
 	<table class="table">
 	<thead>
 	  <tr>
-		<th>ID</th>
+		<th>Number</th>
 		<th>Title</th>
 		<th>Description</th>
 		<th>Priority</th>
@@ -20,14 +22,14 @@
 			@foreach (var item in Model.Items)
 			{
 					<tr>
-					<td>@(item.Id + 1)</td>
+					<td>@(i++)</td>
 					<td>@item.Title</td>
 					<td>@item.Description</td>
 					<td>@item.Priority</td>
 					<td>
-					<form action="Home/Update" method="post" id="myForm">
+					<form action="Home/Update" method="post" id=@("myForm"+item.Id)>
 						<input class='checkBox' type="checkbox" name=@item.Id value="true" @(item.IsComplete ? "checked" : "") />
-						<input class="checkBox" type="hidden" name=@item.Id value="false" />
+						<input type="hidden" name=@item.Id value="false" />
 					</form>
 					</td>
 
@@ -50,7 +52,8 @@
 		var myCheckboxs = document.querySelectorAll('.checkBox');
 		myCheckboxs.forEach(myCheckbox => {
 			myCheckbox.addEventListener('change', () => {
-				document.getElementById('myForm').submit();
+				var x = myCheckbox.getAttribute('name')
+				document.getElementById(`myForm${x}`).submit();
 			});
 		});
 			var images = document.querySelectorAll('.imageRemove');

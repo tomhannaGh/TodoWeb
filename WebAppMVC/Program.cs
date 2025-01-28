@@ -1,5 +1,6 @@
 using Infrastracture.Repository.InMemoryRepository;
-using UseCase;
+using Infrastracture.Repository.SqlServer;
+using Microsoft.Data.SqlClient;
 using UseCase.Repository;
 
 namespace WebAppMVC
@@ -12,7 +13,19 @@ namespace WebAppMVC
 
             // Add services to the container.
             builder.Services.AddControllersWithViews();
-            builder.Services.AddSingleton<ITodoItemRepository>(service => new InMemoryTodoItemListRepository());
+            builder.Services.AddSingleton<ITodoItemRepository>(
+                server =>
+                {
+                    var conn = builder.Configuration.GetConnectionString("SqlServerConnection")?? string.Empty;
+                    if (!string.IsNullOrEmpty(conn))
+                    {
+                        var sqlConnection = new SqlConnection(conn);
+						sqlConnection.Open();
+						return new SqlServerTodoItemListRepository(sqlConnection);
+					}
+                    else
+                        return new InMemoryTodoItemListRepository();
+                });
             builder.Services.AddTransient<TodoItemManager>();
             //builder.WebHost.ConfigureKestrel(option => option.ListenAnyIP(5255));
 

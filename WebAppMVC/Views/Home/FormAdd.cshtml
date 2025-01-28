@@ -1,20 +1,20 @@
-﻿@model Item
+﻿@model ItemModel
 
 <form action="/Home/Create" method="post">
   <div class="mb-3 mt-3">
     <label>Tile:</label>
-    <input type="text" class="form-control" id="email" placeholder="Tile" name="Title">
+    <input type="text" name="title" class="form-control" placeholder="Tile" name="Title">
   </div>
   <div class="mb-3">
     <label>Description:</label>
-   <textarea class="form-control" rows="3" placeholder="Detail..."></textarea>
+   <textarea name="description" class="form-control" rows="3" placeholder="Detail..."></textarea>
   </div>
   <div class="mb-3">
     <label>Priority</label>
-    <select class="form-select">
+    <select class="form-select" name=priority>
         <option value="2">Medium</option>
-        <option value="1">Low</option>
-        <option value="3">Hight</option>
+        <option value="3">Low</option>
+        <option value="1">Hight</option>
     </select>
   </div>
   <button type="submit" class="btn btn-primary">Submit</button>
